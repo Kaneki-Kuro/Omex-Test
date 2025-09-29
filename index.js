@@ -1,35 +1,35 @@
-require('dotenv').config();
-const { Client, GatewayIntentBits, Collection } = require('discord.js');
-const fs = require('fs');
-const mongoose = require('mongoose');
+import 'dotenv/config';
+import { Client, GatewayIntentBits, Collection } from 'discord.js';
+import fs from 'fs';
+import mongoose from 'mongoose';
 
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.MessageContent,
-    GatewayIntentBits.GuildMembers,
-  ],
+    GatewayIntentBits.GuildMembers
+  ]
 });
 
 // Connect to MongoDB
 mongoose.connect(process.env.MONGO_URI, {
   useNewUrlParser: true,
-  useUnifiedTopology: true,
+  useUnifiedTopology: true
 }).then(() => console.log('MongoDB Connected'));
 
 // Load commands
 client.commands = new Collection();
 const commandFiles = fs.readdirSync('./commands').filter(file => file.endsWith('.js'));
 for (const file of commandFiles) {
-  const command = require(`./commands/${file}`);
+  const { default: command } = await import(`./commands/${file}`);
   client.commands.set(command.data.name, command);
 }
 
-// Events
+// Load events
 const eventFiles = fs.readdirSync('./events').filter(file => file.endsWith('.js'));
 for (const file of eventFiles) {
-  const event = require(`./events/${file}`);
+  const { default: event } = await import(`./events/${file}`);
   if (event.once) {
     client.once(event.name, (...args) => event.execute(...args, client));
   } else {
@@ -37,5 +37,5 @@ for (const file of eventFiles) {
   }
 }
 
-// Bot login
+// Login
 client.login(process.env.TOKEN);
