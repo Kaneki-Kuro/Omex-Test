@@ -39,3 +39,17 @@ for (const file of eventFiles) {
 
 // Login
 client.login(process.env.TOKEN);
+
+const express = require("express");
+const app = express();
+
+// Simple homepage for UptimeRobot
+app.get("/", (req, res) => {
+  res.send("Omex bot is running 🚀");
+});
+
+// Use Render's assigned port
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Web server running on port ${PORT}`);
+});
