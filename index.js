@@ -2,7 +2,9 @@ import 'dotenv/config';
 import { Client, GatewayIntentBits, Collection } from 'discord.js';
 import fs from 'fs';
 import mongoose from 'mongoose';
+import express from 'express';
 
+// ===== Discord Bot Setup =====
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -12,13 +14,14 @@ const client = new Client({
   ]
 });
 
-// Connect to MongoDB
+// ===== MongoDB Connection =====
 mongoose.connect(process.env.MONGO_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true
-}).then(() => console.log('MongoDB Connected'));
+}).then(() => console.log('MongoDB Connected'))
+  .catch(err => console.error('MongoDB Connection Error:', err));
 
-// Load commands
+// ===== Load Commands =====
 client.commands = new Collection();
 const commandFiles = fs.readdirSync('./commands').filter(file => file.endsWith('.js'));
 for (const file of commandFiles) {
@@ -26,7 +29,7 @@ for (const file of commandFiles) {
   client.commands.set(command.data.name, command);
 }
 
-// Load events
+// ===== Load Events =====
 const eventFiles = fs.readdirSync('./events').filter(file => file.endsWith('.js'));
 for (const file of eventFiles) {
   const { default: event } = await import(`./events/${file}`);
@@ -37,18 +40,16 @@ for (const file of eventFiles) {
   }
 }
 
-// Login
+// ===== Login Bot =====
 client.login(process.env.TOKEN);
 
-const express = require("express");
+// ===== Express Server for UptimeRobot =====
 const app = express();
 
-// Simple homepage for UptimeRobot
 app.get("/", (req, res) => {
   res.send("Omex bot is running 🚀");
 });
 
-// Use Render's assigned port
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Web server running on port ${PORT}`);
