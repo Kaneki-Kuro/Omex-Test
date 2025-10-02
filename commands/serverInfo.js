@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
+import { SlashCommandBuilder, EmbedBuilder, InteractionResponseType, InteractionResponseFlags } from 'discord.js';
 
 export default {
   data: new SlashCommandBuilder()
@@ -7,21 +7,23 @@ export default {
 
   async execute(interaction) {
     try {
-      // Defer reply to avoid 'Unknown interaction' if it takes >3s
+      // Defer reply first
       await interaction.deferReply({ ephemeral: false });
 
       const guild = interaction.guild;
 
-      // Fetch roles and mentionable roles
+      // Roles list
       const roleList = guild.roles.cache
-        .filter(role => role.name !== '@everyone')
-        .map(role => role.name)
+        .filter(r => r.name !== '@everyone')
+        .map(r => r.name)
         .join(', ') || 'No Roles';
 
-      const categoryChannels = guild.channels.cache.filter(c => c.type === 4).size; // GUILD_CATEGORY = 4
-      const textChannels = guild.channels.cache.filter(c => c.type === 0).size; // GUILD_TEXT = 0
-      const voiceChannels = guild.channels.cache.filter(c => c.type === 2).size; // GUILD_VOICE = 2
+      // Channels
+      const categoryChannels = guild.channels.cache.filter(c => c.type === 4).size;
+      const textChannels = guild.channels.cache.filter(c => c.type === 0).size;
+      const voiceChannels = guild.channels.cache.filter(c => c.type === 2).size;
 
+      // Embed
       const embed = new EmbedBuilder()
         .setTitle(`${guild.name}`)
         .setThumbnail(guild.iconURL({ dynamic: true }))
@@ -37,14 +39,13 @@ export default {
         )
         .setColor('Blue');
 
-      // Edit deferred reply instead of replying again
+      // Edit the deferred reply
       await interaction.editReply({ embeds: [embed] });
 
-    } catch (error) {
-      console.error(error);
-      // Only reply if not already acknowledged
+    } catch (err) {
+      console.error(err);
       if (!interaction.replied && !interaction.deferred) {
-        await interaction.reply({ content: '❌ Error executing command!', ephemeral: true });
+        await interaction.reply({ content: '❌ Error executing command!', flags: InteractionResponseFlags.Ephemeral });
       } else {
         await interaction.editReply({ content: '❌ Error executing command!' });
       }
