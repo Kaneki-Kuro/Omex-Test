@@ -13,7 +13,8 @@ export default {
 
       if (!isOwner && !isAdmin) {
         await message.delete();
-        return message.channel.send(`${message.author}, invite links are not allowed!`);
+        await message.channel.send(`${message.author}, invite links are not allowed!`);
+        return; // ⬅️ stop here so leveling system won't run
       }
     }
 
@@ -25,7 +26,7 @@ export default {
     if (user.xp >= user.level * 100) {
       user.level += 1;
       user.xp = 0;
-      message.channel.send(`${message.author}, you leveled up to level ${user.level}!`);
+      await message.channel.send(`${message.author}, you leveled up to level ${user.level}!`);
     }
 
     await user.save();
