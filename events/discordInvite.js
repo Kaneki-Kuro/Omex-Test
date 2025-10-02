@@ -3,7 +3,7 @@ import User from '../models/User.js';
 
 export default {
   name: 'messageCreate',
-  async execute(message, client) {
+  async execute(message) {
     if (message.author.bot) return;
 
     // ===== Invite Link Protection =====
@@ -14,7 +14,7 @@ export default {
       if (!isOwner && !isAdmin) {
         await message.delete();
         await message.channel.send(`${message.author}, invite links are not allowed!`);
-        return; // ⬅️ stop here so leveling system won't run
+        return; // ⬅️ stop here (NO leveling check for invite messages)
       }
     }
 
@@ -23,6 +23,7 @@ export default {
     if (!user) user = new User({ userId: message.author.id, xp: 0, level: 1 });
 
     user.xp += Math.floor(Math.random() * 10) + 1;
+
     if (user.xp >= user.level * 100) {
       user.level += 1;
       user.xp = 0;
