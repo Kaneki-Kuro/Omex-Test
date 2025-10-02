@@ -1,3 +1,4 @@
+import { PermissionsBitField } from 'discord.js';
 import User from '../models/User.js';
 
 export default {
@@ -7,10 +8,12 @@ export default {
 
     // ===== Invite Link Protection =====
     if (message.content.includes('discord.gg')) {
-      // Check if the member has Administrator permission
-      if (!message.member.permissions.has('Administrator')) {
+      const isOwner = message.guild.ownerId === message.author.id;
+      const isAdmin = message.member.permissions.has(PermissionsBitField.Flags.Administrator);
+
+      if (!isOwner && !isAdmin) {
         await message.delete();
-        message.channel.send(`${message.author}, invite links are not allowed!`);
+        return message.channel.send(`${message.author}, invite links are not allowed!`);
       }
     }
 
