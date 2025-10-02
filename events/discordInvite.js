@@ -14,6 +14,9 @@ export default {
       if (!isOwner && !isAdmin) {
         await message.delete();
         await message.channel.send(`${message.author}, invite links are not allowed!`);
-        return; // ⬅️ stop here (NO leveling check for invite messages)
+        return; // stop here
       }
     }
+
+  } // end of execute
+}; // end of export default
