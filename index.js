@@ -23,27 +23,27 @@ mongoose.connect(process.env.MONGO_URI, {
 
 // ===== Load Commands =====
 client.commands = new Collection();
-const commands = []; // will hold slash command data
+const commands = [];
 
 const commandFiles = fs.readdirSync('./commands').filter(file => file.endsWith('.js'));
 for (const file of commandFiles) {
   const { default: command } = await import(`./commands/${file}`);
   if ('data' in command && 'execute' in command) {
     client.commands.set(command.data.name, command);
-    commands.push(command.data.toJSON()); // prepare for deploy
+    commands.push(command.data.toJSON());
   } else {
-    console.warn(`[WARNING] The command at ${file} is missing "data" or "execute".`);
+    console.warn(`[WARNING] Command ${file} is missing "data" or "execute".`);
   }
 }
 
-// ===== Auto-Deploy Slash Commands Globally =====
+// ===== Auto-Deploy Slash Commands (Global) =====
 const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
 
 (async () => {
   try {
     console.log(`🔄 Refreshing ${commands.length} global (/) commands...`);
     await rest.put(
-      Routes.applicationCommands(process.env.CLIENT_ID), // Global deploy
+      Routes.applicationCommands(process.env.CLIENT_ID),
       { body: commands },
     );
     console.log(`✅ Successfully registered ${commands.length} global (/) commands.`);
@@ -73,7 +73,11 @@ client.on('interactionCreate', async interaction => {
     await command.execute(interaction);
   } catch (err) {
     console.error(err);
-    await interaction.reply({ content: '❌ There was an error executing this command!', ephemeral: true });
+    if (interaction.replied || interaction.deferred) {
+      await interaction.followUp({ content: '❌ Error executing command!', ephemeral: true });
+    } else {
+      await interaction.reply({ content: '❌ Error executing command!', ephemeral: true });
+    }
   }
 });
 
