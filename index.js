@@ -36,7 +36,7 @@ for (const file of commandFiles) {
   }
 }
 
-// ===== Auto-Deploy Slash Commands (Global) =====
+// ===== Global Command Deployment =====
 const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
 
 (async () => {
@@ -44,7 +44,7 @@ const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
     console.log(`🔄 Refreshing ${commands.length} global (/) commands...`);
     await rest.put(
       Routes.applicationCommands(process.env.CLIENT_ID),
-      { body: commands },
+      { body: commands }
     );
     console.log(`✅ Successfully registered ${commands.length} global (/) commands.`);
   } catch (err) {
@@ -63,9 +63,10 @@ for (const file of eventFiles) {
   }
 }
 
-// ===== Handle Interactions =====
+// ===== Handle Interactions Safely =====
 client.on('interactionCreate', async interaction => {
   if (!interaction.isChatInputCommand()) return;
+
   const command = client.commands.get(interaction.commandName);
   if (!command) return;
 
@@ -73,10 +74,12 @@ client.on('interactionCreate', async interaction => {
     await command.execute(interaction);
   } catch (err) {
     console.error(err);
-    if (interaction.replied || interaction.deferred) {
-      await interaction.followUp({ content: '❌ Error executing command!', ephemeral: true });
-    } else {
+
+    // Only reply if interaction hasn’t been acknowledged yet
+    if (!interaction.replied && !interaction.deferred) {
       await interaction.reply({ content: '❌ Error executing command!', ephemeral: true });
+    } else {
+      await interaction.followUp({ content: '❌ Error executing command!', ephemeral: true });
     }
   }
 });
