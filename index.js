@@ -3,6 +3,10 @@ import { Client, GatewayIntentBits, Collection, REST, Routes } from 'discord.js'
 import fs from 'fs';
 import mongoose from 'mongoose';
 import express from 'express';
+import path from 'path';
+import url from 'url';
+
+const __dirname = url.fileURLToPath(new URL('.', import.meta.url));
 
 // ===== Discord Bot Setup =====
 const client = new Client({
@@ -14,6 +18,8 @@ const client = new Client({
   ]
 });
 
+client.commands = new Collection();
+
 // ===== MongoDB Connection =====
 mongoose.connect(process.env.MONGO_URI, {
   useNewUrlParser: true,
@@ -21,31 +27,27 @@ mongoose.connect(process.env.MONGO_URI, {
 }).then(() => console.log('✅ MongoDB Connected'))
   .catch(err => console.error('❌ MongoDB Connection Error:', err));
 
-// ===== Load Commands =====
-client.commands = new Collection();
+// ===== Load Commands Dynamically =====
 const commands = [];
+const commandFiles = fs.readdirSync(path.join(__dirname, 'commands')).filter(file => file.endsWith('.js'));
 
-const commandFiles = fs.readdirSync('./commands').filter(file => file.endsWith('.js'));
 for (const file of commandFiles) {
-  const { default: command } = await import(`./commands/${file}`);
-  if ('data' in command && 'execute' in command) {
-    client.commands.set(command.data.name, command);
-    commands.push(command.data.toJSON());
+  const commandModule = await import(url.pathToFileURL(path.join(__dirname, 'commands', file)).href);
+  if (commandModule?.data && commandModule?.execute) {
+    client.commands.set(commandModule.data.name, commandModule);
+    commands.push(commandModule.data.toJSON());
   } else {
     console.warn(`[WARNING] Command ${file} is missing "data" or "execute".`);
   }
 }
 
-// ===== Global Command Deployment =====
+// ===== Global Slash Command Registration =====
 const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
 
 (async () => {
   try {
     console.log(`🔄 Refreshing ${commands.length} global (/) commands...`);
-    await rest.put(
-      Routes.applicationCommands(process.env.CLIENT_ID),
-      { body: commands }
-    );
+    await rest.put(Routes.applicationCommands(process.env.CLIENT_ID), { body: commands });
     console.log(`✅ Successfully registered ${commands.length} global (/) commands.`);
   } catch (err) {
     console.error('❌ Error registering commands:', err);
@@ -53,13 +55,17 @@ const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
 })();
 
 // ===== Load Events =====
-const eventFiles = fs.readdirSync('./events').filter(file => file.endsWith('.js'));
+const eventFiles = fs.readdirSync(path.join(__dirname, 'events')).filter(file => file.endsWith('.js'));
+
 for (const file of eventFiles) {
-  const { default: event } = await import(`./events/${file}`);
-  if (event.once) {
-    client.once(event.name, (...args) => event.execute(...args, client));
-  } else {
-    client.on(event.name, (...args) => event.execute(...args, client));
+  const eventModule = await import(url.pathToFileURL(path.join(__dirname, 'events', file)).href);
+  if (eventModule?.default) {
+    const event = eventModule.default;
+    if (event.once) {
+      client.once(event.name, (...args) => event.execute(...args, client));
+    } else {
+      client.on(event.name, (...args) => event.execute(...args, client));
+    }
   }
 }
 
@@ -74,8 +80,6 @@ client.on('interactionCreate', async interaction => {
     await command.execute(interaction);
   } catch (err) {
     console.error(err);
-
-    // Only reply if interaction hasn’t been acknowledged yet
     if (!interaction.replied && !interaction.deferred) {
       await interaction.reply({ content: '❌ Error executing command!', ephemeral: true });
     } else {
