@@ -52,9 +52,13 @@ export default {
     const progressInterval = setInterval(async () => {
       percent += Math.floor(Math.random() * 25) + 10;
       if (percent >= 100) percent = 100;
-      await progressMsg.edit({
-        content: `🎨 Generating your **${style}** image... (${percent}%)`,
-      });
+      try {
+        await progressMsg.edit({
+          content: `🎨 Generating your **${style}** image... (${percent}%)`,
+        });
+      } catch (e) {
+        clearInterval(progressInterval);
+      }
       if (percent === 100) clearInterval(progressInterval);
     }, 1500);
 
