@@ -8,6 +8,9 @@ import url from 'url';
 
 const __dirname = url.fileURLToPath(new URL('.', import.meta.url));
 
+// ===== Global Prefix =====
+const PREFIX = '-';
+
 // ===== Discord Bot Setup =====
 const client = new Client({
   intents: [
@@ -69,7 +72,7 @@ for (const file of eventFiles) {
   }
 }
 
-// ===== Handle Interactions Safely =====
+// ===== Handle Slash Interactions Safely =====
 client.on('interactionCreate', async interaction => {
   if (!interaction.isChatInputCommand()) return;
 
@@ -85,6 +88,35 @@ client.on('interactionCreate', async interaction => {
     } else {
       await interaction.followUp({ content: '❌ Error executing command!', ephemeral: true });
     }
+  }
+});
+
+// ===== Handle Prefix Commands =====
+client.on('messageCreate', async message => {
+  if (message.author.bot) return;
+  if (!message.content.startsWith(PREFIX)) return;
+
+  const args = message.content.slice(PREFIX.length).trim().split(/ +/);
+  const commandName = args.shift().toLowerCase();
+  const command = client.commands.get(commandName);
+  if (!command) return;
+
+  try {
+    // Fake interaction object for backward compatibility
+    const fakeInteraction = {
+      user: message.author,
+      channel: message.channel,
+      guild: message.guild,
+      replied: false,
+      deferred: false,
+      reply: async (options) => message.channel.send(options.content || options),
+      editReply: async (options) => message.channel.send(options.content || options),
+    };
+
+    await command.execute(fakeInteraction, args);
+  } catch (err) {
+    console.error(err);
+    message.channel.send('❌ Error executing command!');
   }
 });
 
