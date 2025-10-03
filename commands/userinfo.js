@@ -3,44 +3,36 @@ import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
 export default {
   data: new SlashCommandBuilder()
     .setName('userinfo')
-    .setDescription('Shows detailed info about a user')
+    .setDescription('Shows information about a user')
     .addUserOption(option =>
-      option.setName('user')
-        .setDescription('The user to get info about')
+      option
+        .setName('target')
+        .setDescription('The user you want info about')
         .setRequired(false)
     ),
 
-  async execute(interaction, args = []) {
+  async execute(interaction) {
     try {
-      let user;
-      let member;
+      // Get the user, default to interaction user if none provided
+      const user = interaction.options.getUser('target') || interaction.user;
+      const member = interaction.guild.members.cache.get(user.id);
 
-      // Slash command
-      if (interaction.isChatInputCommand?.()) {
-        user = interaction.options.getUser('user') || interaction.user;
-        member = interaction.guild.members.cache.get(user.id);
-      } else {
-        // Prefix command
-        user = interaction.mentions?.users?.first() || (args[0] ? await interaction.guild.members.fetch(args[0]).then(m => m.user).catch(() => null) : null) || interaction.user;
-        member = interaction.guild.members.cache.get(user.id);
-      }
-
+      // Create embed
       const embed = new EmbedBuilder()
-        .setAuthor({ name: `${user.tag}`, iconURL: user.displayAvatarURL({ dynamic: true }) })
-        .setTitle('User Info')
+        .setTitle(`${user.tag}`)
         .setThumbnail(user.displayAvatarURL({ dynamic: true }))
         .addFields(
           { name: 'Username', value: `${user.username}`, inline: true },
           { name: 'Discriminator', value: `#${user.discriminator}`, inline: true },
           { name: 'ID', value: `${user.id}`, inline: true },
-          { name: 'Bot?', value: `${user.bot ? 'Yes' : 'No'}`, inline: true },
-          { name: 'Joined Server', value: member ? `<t:${Math.floor(member.joinedTimestamp / 1000)}:R>` : 'Unknown', inline: true },
-          { name: 'Account Created', value: `<t:${Math.floor(user.createdTimestamp / 1000)}:R>`, inline: true }
+          { name: 'Bot', value: `${user.bot ? 'Yes' : 'No'}`, inline: true },
+          { name: 'Account Created', value: `${user.createdAt.toLocaleString()}`, inline: true },
+          { name: 'Joined Server', value: member ? `${member.joinedAt.toLocaleString()}` : 'N/A', inline: true },
+          { name: 'Roles', value: member ? member.roles.cache.filter(r => r.name !== '@everyone').map(r => r.name).join(', ') || 'No roles' : 'N/A', inline: false }
         )
-        .setFooter({ text: `Requested by ${interaction.user.tag}`, iconURL: interaction.user.displayAvatarURL() })
-        .setColor('Blue')
-        .setTimestamp();
+        .setColor('Blue');
 
+      // Reply safely
       if (interaction.deferred || interaction.replied) {
         await interaction.editReply({ embeds: [embed] });
       } else {
@@ -54,5 +46,5 @@ export default {
         await interaction.reply({ content: '❌ Error executing command!', ephemeral: true });
       }
     }
-  }
+  },
 };
