@@ -1,22 +1,15 @@
-import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
+import { EmbedBuilder } from 'discord.js';
 
 export default {
-  data: new SlashCommandBuilder()
-    .setName('userinfo')
-    .setDescription('Shows detailed info about a user')
-    .addUserOption(option =>
-      option.setName('target')
-        .setDescription('The user to get info about')
-        .setRequired(false)
-    ),
+  name: 'userinfo',
+  description: 'Shows info about a user',
 
-  async execute(interaction) {
+  async execute(message, args) {
     try {
-      // Get the user or default to the command sender
-      const user = interaction.options.getUser('target') || interaction.user;
-      const member = interaction.guild.members.cache.get(user.id);
+      // Get the user from mention or default to author
+      const user = message.mentions.users.first() || message.author;
+      const member = message.guild.members.cache.get(user.id);
 
-      // Create embed
       const embed = new EmbedBuilder()
         .setTitle(`${user.tag}`)
         .setThumbnail(user.displayAvatarURL({ dynamic: true }))
@@ -29,23 +22,13 @@ export default {
           { name: 'Roles', value: member ? member.roles.cache.filter(r => r.name !== '@everyone').map(r => r.name).join(', ') || 'No Roles' : 'N/A', inline: false }
         )
         .setColor('Blue')
-        .setFooter({ text: `Requested by ${interaction.user.tag}`, iconURL: interaction.user.displayAvatarURL({ dynamic: true }) })
+        .setFooter({ text: `Requested by ${message.author.tag}`, iconURL: message.author.displayAvatarURL({ dynamic: true }) })
         .setTimestamp();
 
-      // Reply safely
-      if (interaction.deferred || interaction.replied) {
-        await interaction.editReply({ embeds: [embed] });
-      } else {
-        await interaction.reply({ embeds: [embed] });
-      }
+      await message.channel.send({ embeds: [embed] });
     } catch (err) {
       console.error(err);
-      // Safe error reply
-      if (interaction.deferred || interaction.replied) {
-        await interaction.editReply({ content: '❌ Error executing command!', ephemeral: true });
-      } else {
-        await interaction.reply({ content: '❌ Error executing command!', ephemeral: true });
-      }
+      await message.channel.send('❌ Error executing command!');
     }
   },
 };
