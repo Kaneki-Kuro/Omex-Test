@@ -8,7 +8,7 @@ import {
 
 export default {
   data: new SlashCommandBuilder()
-    .setName("style")
+    .setName("imagine")
     .setDescription("Generate an image in a given style")
     .addStringOption(option =>
       option
@@ -20,7 +20,7 @@ export default {
       option
         .setName("style")
         .setDescription("Choose a style")
-        .setRequired(true)
+        .setRequired(false)
         .addChoices(
           { name: "Default", value: "default" },
           { name: "Realistic", value: "realistic" },
