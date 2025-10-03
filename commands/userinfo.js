@@ -14,7 +14,7 @@ export async function execute(interaction) {
   const member = interaction.guild.members.cache.get(user.id);
 
   const embed = new EmbedBuilder()
-    .setColor('#5865F2') // You can customize this
+    .setColor('#5865F2')
     .setTitle(`User Info: ${user.tag}`)
     .setAuthor({ name: interaction.client.user.username, iconURL: interaction.client.user.displayAvatarURL() })
     .setThumbnail(user.displayAvatarURL({ dynamic: true, size: 1024 }))
