@@ -1,55 +1,50 @@
-import { EmbedBuilder } from "discord.js";
+import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
 
-export const data = {
-  name: "userinfo"
-};
+export const data = new SlashCommandBuilder()
+  .setName('userinfo')
+  .setDescription('Shows detailed info about a user')
+  .addUserOption(option =>
+    option
+      .setName('target')
+      .setDescription('Select a user')
+      .setRequired(false)
+  );
 
-export async function execute(interactionOrMessage, args) {
+export async function execute(interaction) {
   try {
-    const isSlash = typeof interactionOrMessage.isChatInputCommand === "function";
+    // Get target user or default to command sender
+    const user = interaction.options.getUser('target') || interaction.user;
+    const member = interaction.guild.members.cache.get(user.id);
 
-    // Determine user
-    let user;
-    if (isSlash) {
-      user = interactionOrMessage.options.getUser("target") || interactionOrMessage.user;
-    } else {
-      const message = interactionOrMessage;
-      user = message.mentions.users.first() || message.author;
-    }
+    // Roles excluding @everyone
+    const roleList = member.roles.cache
+      .filter(role => role.name !== '@everyone')
+      .map(role => role.name)
+      .join(', ') || 'No Roles';
 
     // Create embed
     const embed = new EmbedBuilder()
       .setTitle(`${user.tag}`)
       .setThumbnail(user.displayAvatarURL({ dynamic: true }))
       .addFields(
-        { name: "ID", value: user.id, inline: true },
-        { name: "Username", value: user.username, inline: true },
-        { name: "Discriminator", value: `#${user.discriminator}`, inline: true },
-        {
-          name: "Account Created",
-          value: `<t:${Math.floor(user.createdTimestamp / 1000)}:R>`,
-          inline: true
-        }
+        { name: 'User ID', value: `${user.id}`, inline: true },
+        { name: 'Joined Server', value: `${member.joinedAt.toLocaleString()}`, inline: true },
+        { name: 'Account Created', value: `${user.createdAt.toLocaleString()}`, inline: true },
+        { name: 'Roles', value: `${member.roles.cache.size}`, inline: true },
+        { name: 'Role List', value: roleList, inline: false }
       )
-      .setColor("Purple")
-      .setFooter({
-        text: `Requested by ${isSlash ? interactionOrMessage.user.tag : interactionOrMessage.author.tag}`,
-        iconURL: (isSlash ? interactionOrMessage.user : interactionOrMessage.author).displayAvatarURL()
-      })
+      .setColor('Blue')
+      .setFooter({ text: `Requested by ${interaction.user.tag}`, iconURL: interaction.user.displayAvatarURL() })
       .setTimestamp();
 
-    if (isSlash) {
-      if (!interactionOrMessage.replied && !interactionOrMessage.deferred) {
-        await interactionOrMessage.reply({ embeds: [embed] });
-      }
-    } else {
-      await interactionOrMessage.channel.send({ embeds: [embed] });
-    }
+    await interaction.reply({ embeds: [embed] });
 
   } catch (err) {
-    console.error("❌ Error in userinfo:", err);
-    if (interactionOrMessage.channel) {
-      await interactionOrMessage.channel.send("❌ Error executing command!");
+    console.error('❌ Error in userinfo:', err);
+    if (!interaction.replied && !interaction.deferred) {
+      await interaction.reply({ content: '❌ Error executing command!', ephemeral: true });
+    } else {
+      await interaction.editReply({ content: '❌ Error executing command!', ephemeral: true });
     }
   }
 }
