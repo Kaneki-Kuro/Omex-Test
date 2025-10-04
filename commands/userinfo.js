@@ -1,58 +1,65 @@
-import { EmbedBuilder } from 'discord.js';
+// commands/userinfo.js
+import {
+  SlashCommandBuilder,
+  EmbedBuilder,
+  PermissionsBitField
+} from "discord.js";
 
-export default {
-  name: 'userinfo',
-  description: 'Shows detailed info about a user',
+export const data = new SlashCommandBuilder()
+  .setName("userinfo")
+  .setDescription("Get information about a user")
+  .addUserOption(option =>
+    option.setName("target").setDescription("Select a user").setRequired(false)
+  );
 
-  async execute(interaction, args) {
-    try {
-      let member;
+export async function execute(interaction) {
+  // Slash command execution
+  const user = interaction.options.getUser("target") || interaction.user;
+  const member = await interaction.guild.members.fetch(user.id);
 
-      // If prefix command: args[0] may be mention or ID
-      if (args && args.length > 0) {
-        const id = args[0].replace(/[<@!>]/g, '');
-        member = await interaction.guild.members.fetch(id).catch(() => null);
-      }
+  const embed = new EmbedBuilder()
+    .setColor("Purple")
+    .setTitle(`User Info - ${user.tag}`)
+    .setThumbnail(user.displayAvatarURL({ dynamic: true }))
+    .addFields(
+      { name: "ID", value: user.id, inline: true },
+      { name: "Username", value: user.username, inline: true },
+      { name: "Discriminator", value: `#${user.discriminator}`, inline: true },
+      { name: "Joined Server", value: `<t:${Math.floor(member.joinedTimestamp / 1000)}:R>`, inline: true },
+      { name: "Account Created", value: `<t:${Math.floor(user.createdTimestamp / 1000)}:R>`, inline: true }
+    )
+    .setFooter({ text: `Requested by ${interaction.user.tag}` })
+    .setTimestamp();
 
-      // If no mention/ID, use the message author or interaction user
-      if (!member) {
-        member = interaction.guild.members.cache.get(interaction.user.id);
-      }
+  await interaction.reply({ embeds: [embed] });
+}
 
-      if (!member) {
-        return interaction.reply({ content: '❌ Could not find that user!' });
-      }
+// ===== PREFIX COMMAND SUPPORT =====
+export async function prefixExecute(message, args) {
+  // Only run if message starts with "-"
+  if (!message.content.startsWith("-userinfo")) return;
 
-      const user = member.user;
+  const user =
+    message.mentions.users.first() ||
+    message.client.users.cache.get(args[0]) ||
+    message.author;
 
-      // Roles excluding @everyone
-      const roleList = member.roles.cache
-        .filter(r => r.name !== '@everyone')
-        .map(r => r.name)
-        .join(', ') || 'No Roles';
+  const member = await message.guild.members.fetch(user.id);
 
-      // Create embed
-      const embed = new EmbedBuilder()
-        .setTitle(`${user.tag}'s Info`)
-        .setThumbnail(user.displayAvatarURL({ dynamic: true }))
-        .addFields(
-          { name: 'ID', value: `${user.id}`, inline: true },
-          { name: 'Username', value: `${user.username}`, inline: true },
-          { name: 'Discriminator', value: `#${user.discriminator}`, inline: true },
-          { name: 'Bot?', value: `${user.bot ? 'Yes' : 'No'}`, inline: true },
-          { name: 'Status', value: `${member.presence?.status || 'offline'}`, inline: true },
-          { name: 'Joined Server', value: `${member.joinedAt.toLocaleString()}`, inline: true },
-          { name: 'Roles', value: `${member.roles.cache.size}`, inline: true },
-          { name: 'Role List', value: roleList, inline: false },
-          { name: 'Account Created', value: `${user.createdAt.toLocaleString()}`, inline: true }
-        )
-        .setColor('Blue');
+  const embed = new EmbedBuilder()
+    .setColor("Purple")
+    .setTitle(`User Info - ${user.tag}`)
+    .setThumbnail(user.displayAvatarURL({ dynamic: true }))
+    .addFields(
+      { name: "ID", value: user.id, inline: true },
+      { name: "Username", value: user.username, inline: true },
+      { name: "Discriminator", value: `#${user.discriminator}`, inline: true },
+      { name: "Joined Server", value: `<t:${Math.floor(member.joinedTimestamp / 1000)}:R>`, inline: true },
+      { name: "Account Created", value: `<t:${Math.floor(user.createdTimestamp / 1000)}:R>`, inline: true }
+    )
+    .setFooter({ text: `Requested by ${message.author.tag}` })
+    .setTimestamp();
 
-      // Send reply
-      await interaction.reply({ embeds: [embed] });
-    } catch (err) {
-      console.error(err);
-      await interaction.reply({ content: '❌ Error fetching user info!' });
-    }
-  },
-};
+  await message.channel.send({ embeds: [embed] });
+}
+```
