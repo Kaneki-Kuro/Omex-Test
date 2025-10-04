@@ -7,7 +7,7 @@ export const data = new SlashCommandBuilder()
   .setName('afk') // main command
   .setDescription('AFK commands')
   .addSubcommand(sub =>
-    sub.setName('set') // subcommand
+    sub.setName('set') // subcommand for /afk set
       .setDescription('Set your AFK status')
       .addStringOption(option =>
         option.setName('reason')
@@ -38,7 +38,7 @@ export { afkUsers };
 export async function handleMessage(message) {
   if (message.author.bot) return;
 
-  // Remove AFK if the author was AFK
+  // 1️⃣ Remove AFK if the author was AFK
   const afkData = afkUsers.get(message.author.id);
   if (afkData) {
     const afkTimeMs = Date.now() - afkData.timestamp;
@@ -57,7 +57,7 @@ export async function handleMessage(message) {
     afkUsers.delete(message.author.id);
   }
 
-  // Notify if someone mentions an AFK user
+  // 2️⃣ Notify if someone mentions an AFK user (without pinging them)
   message.mentions.users.forEach(async user => {
     if (afkUsers.has(user.id)) {
       const afkInfo = afkUsers.get(user.id);
@@ -68,7 +68,8 @@ export async function handleMessage(message) {
           text: `AFK Start: <t:${Math.floor(afkInfo.timestamp / 1000)}:F>`
         });
 
-      await message.reply({ embeds: [embed], ephemeral: true });
+      // No pinging the AFK user
+      await message.reply({ embeds: [embed], allowedMentions: { users: [] } });
     }
   });
 }
