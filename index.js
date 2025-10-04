@@ -8,9 +8,6 @@ import url from 'url';
 
 const __dirname = url.fileURLToPath(new URL('.', import.meta.url));
 
-// ===== Global Prefix =====
-const PREFIX = '-';
-
 // ===== Discord Bot Setup =====
 const client = new Client({
   intents: [
@@ -38,7 +35,10 @@ for (const file of commandFiles) {
   const commandModule = await import(url.pathToFileURL(path.join(__dirname, 'commands', file)).href);
   if (commandModule?.data && commandModule?.execute) {
     client.commands.set(commandModule.data.name, commandModule);
-    commands.push(commandModule.data.toJSON());
+    // Only push JSON for slash commands
+    if (commandModule.data.toJSON) {
+      commands.push(commandModule.data.toJSON());
+    }
   } else {
     console.warn(`[WARNING] Command ${file} is missing "data" or "execute".`);
   }
@@ -72,7 +72,7 @@ for (const file of eventFiles) {
   }
 }
 
-// ===== Handle Slash Interactions Safely =====
+// ===== Handle Slash Interactions =====
 client.on('interactionCreate', async interaction => {
   if (!interaction.isChatInputCommand()) return;
 
@@ -82,41 +82,12 @@ client.on('interactionCreate', async interaction => {
   try {
     await command.execute(interaction);
   } catch (err) {
-    console.error(err);
+    console.error('❌ Error in command:', err);
     if (!interaction.replied && !interaction.deferred) {
       await interaction.reply({ content: '❌ Error executing command!', ephemeral: true });
     } else {
       await interaction.followUp({ content: '❌ Error executing command!', ephemeral: true });
     }
-  }
-});
-
-// ===== Handle Prefix Commands =====
-client.on('messageCreate', async message => {
-  if (message.author.bot) return;
-  if (!message.content.startsWith(PREFIX)) return;
-
-  const args = message.content.slice(PREFIX.length).trim().split(/ +/);
-  const commandName = args.shift().toLowerCase();
-  const command = client.commands.get(commandName);
-  if (!command) return;
-
-  try {
-    // Fake interaction object for backward compatibility
-    const fakeInteraction = {
-      user: message.author,
-      channel: message.channel,
-      guild: message.guild,
-      replied: false,
-      deferred: false,
-      reply: async (options) => message.channel.send(options.content || options),
-      editReply: async (options) => message.channel.send(options.content || options),
-    };
-
-    await command.execute(fakeInteraction, args);
-  } catch (err) {
-    console.error(err);
-    message.channel.send('❌ Error executing command!');
   }
 });
 
