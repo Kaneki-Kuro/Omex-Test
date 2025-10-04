@@ -1,8 +1,7 @@
 // commands/userinfo.js
 import {
   SlashCommandBuilder,
-  EmbedBuilder,
-  PermissionsBitField
+  EmbedBuilder
 } from "discord.js";
 
 export const data = new SlashCommandBuilder()
@@ -13,7 +12,6 @@ export const data = new SlashCommandBuilder()
   );
 
 export async function execute(interaction) {
-  // Slash command execution
   const user = interaction.options.getUser("target") || interaction.user;
   const member = await interaction.guild.members.fetch(user.id);
 
@@ -36,7 +34,6 @@ export async function execute(interaction) {
 
 // ===== PREFIX COMMAND SUPPORT =====
 export async function prefixExecute(message, args) {
-  // Only run if message starts with "-"
   if (!message.content.startsWith("-userinfo")) return;
 
   const user =
