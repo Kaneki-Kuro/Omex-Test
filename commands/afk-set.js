@@ -2,7 +2,7 @@ import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
 const afkUsers = new Map();
 
 export const data = new SlashCommandBuilder()
-  .setName('afk set')
+  .setName('afk-set')
   .setDescription('Set your AFK status')
   .addStringOption(option =>
     option.setName('reason')
