@@ -1,5 +1,6 @@
 import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
 
+// Store AFK users
 const afkUsers = new Map();
 
 // ===== Slash Command: /afk set =====
@@ -7,7 +8,7 @@ export const data = new SlashCommandBuilder()
   .setName('afk') // main command
   .setDescription('AFK commands')
   .addSubcommand(sub =>
-    sub.setName('set') // subcommand for /afk set
+    sub.setName('set') // /afk set
       .setDescription('Set your AFK status')
       .addStringOption(option =>
         option.setName('reason')
@@ -38,9 +39,11 @@ export { afkUsers };
 export async function handleMessage(message) {
   if (message.author.bot) return;
 
+  const userId = message.author.id;
+
   // 1️⃣ Remove AFK if the author was AFK
-  const afkData = afkUsers.get(message.author.id);
-  if (afkData) {
+  if (afkUsers.has(userId)) {
+    const afkData = afkUsers.get(userId);
     const afkTimeMs = Date.now() - afkData.timestamp;
     const minutes = Math.floor(afkTimeMs / 60000);
     const seconds = Math.floor((afkTimeMs % 60000) / 1000);
@@ -54,21 +57,20 @@ export async function handleMessage(message) {
       .setColor('Green');
 
     await message.channel.send({ embeds: [embed] });
-    afkUsers.delete(message.author.id);
+    afkUsers.delete(userId);
   }
 
-  // 2️⃣ Notify if someone mentions an AFK user (without pinging them)
-  message.mentions.users.forEach(async user => {
-    if (afkUsers.has(user.id)) {
-      const afkInfo = afkUsers.get(user.id);
+  // 2️⃣ Notify if someone mentions an AFK user (without pinging)
+  message.mentions.users.forEach(async mentionedUser => {
+    if (afkUsers.has(mentionedUser.id)) {
+      const afkInfo = afkUsers.get(mentionedUser.id);
       const embed = new EmbedBuilder()
-        .setDescription(`💤 **${user.username}** is currently AFK\nReason: \`${afkInfo.reason}\``)
+        .setDescription(`💤 **${mentionedUser.username}** is currently AFK\nReason: \`${afkInfo.reason}\``)
         .setColor('Orange')
         .setFooter({
           text: `AFK Start: <t:${Math.floor(afkInfo.timestamp / 1000)}:F>`
         });
 
-      // No pinging the AFK user
       await message.reply({ embeds: [embed], allowedMentions: { users: [] } });
     }
   });
